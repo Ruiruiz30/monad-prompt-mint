@@ -5,6 +5,22 @@ const { ethers, run } = hre;
 async function main() {
   console.log("Deploying PromptMint contract...");
 
+  // Get the signer
+  const signers = await ethers.getSigners();
+  if (signers.length === 0) {
+    throw new Error("No signers available. Check your PRIVATE_KEY in .env.local");
+  }
+  
+  const deployer = signers[0];
+  console.log("Deploying with account:", deployer.address);
+  
+  const balance = await deployer.provider.getBalance(deployer.address);
+  console.log("Account balance:", ethers.formatEther(balance), "ETH");
+  
+  if (balance === 0n) {
+    console.log("⚠️  Account has no balance! Visit https://testnet-faucet.monad.xyz to get test tokens");
+  }
+
   // Get the contract factory
   const PromptMint = await ethers.getContractFactory("PromptMint");
 
