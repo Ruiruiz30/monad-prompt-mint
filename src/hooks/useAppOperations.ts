@@ -134,7 +134,7 @@ export function useAppOperations() {
     })
 
     try {
-      await withRetry(
+      const data = await withRetry(
         async () => {
           // Simulate progress updates
           const progressInterval = setInterval(() => {
@@ -219,24 +219,16 @@ export function useAppOperations() {
         }
       )
 
-      // If we get here, the operation succeeded
-      const data = await withRetry(async () => {
-        const requestBody: GenerateRequest = { prompt: state.prompt.trim() }
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        })
-        
-        if (!response.ok) {
-          const errorData: APIError = await response.json()
-          throw new Error(errorData.error)
-        }
-        
-        return response.json()
-      })
-
       // Success - update state and history
+      if (!data.previewURL || !data.tokenURI) {
+        throw new AppError(
+          ErrorType.GENERATION_FAILED,
+          'Invalid response: missing image URL or token URI',
+          true,
+          data
+        )
+      }
+      
       completeGeneration(data.previewURL, data.tokenURI)
       updateOperationInHistory(operationId, {
         status: 'success',
