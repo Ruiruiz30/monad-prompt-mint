@@ -6,7 +6,8 @@ import { keccak256, toBytes } from 'viem'
 import { useAppContext } from '@/contexts/AppContext'
 import { useWallet } from '@/hooks/useWallet'
 import { getClientConfig } from '@/lib/config'
-import { GenerateRequest, GenerateResponse, APIError } from '@/types'
+import { GenerateRequest, GenerateResponse, APIError, ErrorType } from '@/types'
+import { withRetry, classifyError, AppError, checkNetworkStatus } from '@/lib/errorHandling'
 
 // Contract ABI for the mint function
 const PROMPT_MINT_ABI = [
@@ -66,19 +67,40 @@ export function useAppOperations() {
   })
 
   // Input validation
-  const validatePrompt = useCallback((prompt: string): { isValid: boolean; error?: string } => {
+  const validatePrompt = useCallback((prompt: string): { isValid: boolean; error?: AppError } => {
     const trimmedPrompt = prompt.trim()
     
     if (!trimmedPrompt) {
-      return { isValid: false, error: 'Please enter a prompt to generate an image' }
+      return { 
+        isValid: false, 
+        error: new AppError(
+          ErrorType.VALIDATION_ERROR,
+          'Please enter a prompt to generate an image',
+          false
+        )
+      }
     }
     
     if (trimmedPrompt.length < 3) {
-      return { isValid: false, error: 'Prompt must be at least 3 characters long' }
+      return { 
+        isValid: false, 
+        error: new AppError(
+          ErrorType.VALIDATION_ERROR,
+          'Prompt must be at least 3 characters long',
+          false
+        )
+      }
     }
     
     if (trimmedPrompt.length > 500) {
-      return { isValid: false, error: 'Prompt must be less than 500 characters' }
+      return { 
+        isValid: false, 
+        error: new AppError(
+          ErrorType.VALIDATION_ERROR,
+          'Prompt must be less than 500 characters',
+          false
+        )
+      }
     }
     
     return { isValid: true }
@@ -86,6 +108,17 @@ export function useAppOperations() {
 
   // Generate image operation
   const generateImage = useCallback(async () => {
+    // Check network connectivity first
+    const isOnline = await checkNetworkStatus()
+    if (!isOnline) {
+      failGeneration(new AppError(
+        ErrorType.NETWORK_ERROR,
+        'No internet connection. Please check your network and try again.',
+        true
+      ))
+      return
+    }
+
     const validation = validatePrompt(state.prompt)
     if (!validation.isValid) {
       failGeneration(validation.error!)
@@ -101,43 +134,107 @@ export function useAppOperations() {
     })
 
     try {
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        updateGenerationProgress(
-          Math.min(state.generationState.progress + 10, 80),
-          'generating'
-        )
-      }, 500)
+      await withRetry(
+        async () => {
+          // Simulate progress updates
+          const progressInterval = setInterval(() => {
+            updateGenerationProgress(
+              Math.min(state.generationState.progress + 10, 80),
+              'generating'
+            )
+          }, 500)
 
-      const requestBody: GenerateRequest = { prompt: state.prompt.trim() }
-      
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+          try {
+            const requestBody: GenerateRequest = { prompt: state.prompt.trim() }
+            
+            const response = await fetch('/api/generate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestBody),
+            })
+
+            clearInterval(progressInterval)
+
+            if (!response.ok) {
+              const errorData: APIError = await response.json()
+              
+              // Map API error codes to appropriate error types
+              let errorType = ErrorType.GENERATION_FAILED
+              if (errorData.code === 'RATE_LIMITED') {
+                errorType = ErrorType.RATE_LIMIT_ERROR
+              } else if (errorData.code === 'TIMEOUT') {
+                errorType = ErrorType.TIMEOUT_ERROR
+              } else if (errorData.code === 'AUTH_FAILED') {
+                errorType = ErrorType.AUTHENTICATION_ERROR
+              } else if (errorData.code === 'CONTENT_POLICY_VIOLATION') {
+                errorType = ErrorType.CONTENT_POLICY_ERROR
+              }
+              
+              throw new AppError(
+                errorType,
+                errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+                errorType === ErrorType.RATE_LIMIT_ERROR || errorType === ErrorType.TIMEOUT_ERROR,
+                errorData
+              )
+            }
+
+            // Update progress to uploading
+            updateGenerationProgress(90, 'uploading')
+
+            const data: GenerateResponse = await response.json()
+            
+            if (!data.success) {
+              throw new AppError(
+                ErrorType.GENERATION_FAILED,
+                data.error || 'Generation failed',
+                true
+              )
+            }
+
+            if (!data.previewURL || !data.tokenURI) {
+              throw new AppError(
+                ErrorType.GENERATION_FAILED,
+                'Invalid response: missing image URL or token URI',
+                true,
+                data
+              )
+            }
+
+            return data
+          } finally {
+            clearInterval(progressInterval)
+          }
         },
-        body: JSON.stringify(requestBody),
+        {
+          maxRetries: 2,
+          baseDelay: 1000,
+          maxDelay: 5000,
+          backoffMultiplier: 2
+        },
+        (attempt, error) => {
+          console.warn(`Generation attempt ${attempt} failed:`, error.message)
+          updateGenerationProgress(10, 'generating') // Reset progress for retry
+        }
+      )
+
+      // If we get here, the operation succeeded
+      const data = await withRetry(async () => {
+        const requestBody: GenerateRequest = { prompt: state.prompt.trim() }
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        })
+        
+        if (!response.ok) {
+          const errorData: APIError = await response.json()
+          throw new Error(errorData.error)
+        }
+        
+        return response.json()
       })
-
-      clearInterval(progressInterval)
-
-      if (!response.ok) {
-        const errorData: APIError = await response.json()
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      // Update progress to uploading
-      updateGenerationProgress(90, 'uploading')
-
-      const data: GenerateResponse = await response.json()
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Generation failed')
-      }
-
-      if (!data.previewURL || !data.tokenURI) {
-        throw new Error('Invalid response: missing image URL or token URI')
-      }
 
       // Success - update state and history
       completeGeneration(data.previewURL, data.tokenURI)
@@ -152,12 +249,11 @@ export function useAppOperations() {
     } catch (error) {
       console.error('Image generation failed:', error)
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      
-      failGeneration(errorMessage)
+      const appError = classifyError(error)
+      failGeneration(appError)
       updateOperationInHistory(operationId, {
         status: 'error',
-        error: errorMessage
+        error: appError.message
       })
     }
   }, [
@@ -174,7 +270,42 @@ export function useAppOperations() {
 
   // Mint NFT operation
   const mintNFT = useCallback(async () => {
-    if (!isConnected || isWrongNetwork || !state.tokenURI || !state.prompt.trim()) {
+    // Validation checks
+    if (!isConnected) {
+      failMinting(new AppError(
+        ErrorType.WALLET_CONNECTION,
+        'Please connect your wallet first',
+        false
+      ))
+      return
+    }
+
+    if (isWrongNetwork) {
+      failMinting(new AppError(
+        ErrorType.NETWORK_MISMATCH,
+        'Please switch to Monad Testnet in your wallet',
+        false
+      ))
+      return
+    }
+
+    if (!state.tokenURI || !state.prompt.trim()) {
+      failMinting(new AppError(
+        ErrorType.VALIDATION_ERROR,
+        'Missing required data for minting',
+        false
+      ))
+      return
+    }
+
+    // Check network connectivity
+    const isOnline = await checkNetworkStatus()
+    if (!isOnline) {
+      failMinting(new AppError(
+        ErrorType.NETWORK_ERROR,
+        'No internet connection. Please check your network and try again.',
+        true
+      ))
       return
     }
 
@@ -200,37 +331,37 @@ export function useAppOperations() {
       // Reset any previous write errors
       resetWrite()
 
-      // Call the smart contract mint function
-      await writeContract({
-        address: config.contractAddress as `0x${string}`,
-        abi: PROMPT_MINT_ABI,
-        functionName: 'mint',
-        args: [promptHash, state.tokenURI],
-      })
+      // Call the smart contract mint function with retry logic
+      await withRetry(
+        async () => {
+          await writeContract({
+            address: config.contractAddress as `0x${string}`,
+            abi: PROMPT_MINT_ABI,
+            functionName: 'mint',
+            args: [promptHash, state.tokenURI],
+          })
+        },
+        {
+          maxRetries: 1, // Only retry once for blockchain transactions
+          baseDelay: 2000,
+          maxDelay: 5000,
+          backoffMultiplier: 1.5
+        },
+        (attempt, error) => {
+          console.warn(`Minting attempt ${attempt} failed:`, error.message)
+        }
+      )
 
       console.log('Transaction submitted successfully')
 
     } catch (error) {
       console.error('Minting failed:', error)
       
-      let errorMessage = 'Failed to mint NFT'
-      
-      if (error instanceof Error) {
-        if (error.message.includes('PromptAlreadyUsed')) {
-          errorMessage = 'This prompt has already been used to mint an NFT. Please try a different prompt.'
-        } else if (error.message.includes('User rejected')) {
-          errorMessage = 'Transaction was rejected by user'
-        } else if (error.message.includes('insufficient funds')) {
-          errorMessage = 'Insufficient funds to pay for gas fees'
-        } else {
-          errorMessage = error.message
-        }
-      }
-
-      failMinting(errorMessage)
+      const appError = classifyError(error)
+      failMinting(appError)
       updateOperationInHistory(operationId, {
         status: 'error',
-        error: errorMessage
+        error: appError.message
       })
     }
   }, [
@@ -291,9 +422,9 @@ export function useAppOperations() {
   useEffect(() => {
     if (writeError && state.mintingState.status !== 'error') {
       console.error('Write contract error:', writeError)
-      const errorMessage = writeError.message || 'Failed to submit transaction'
       
-      failMinting(errorMessage)
+      const appError = classifyError(writeError)
+      failMinting(appError)
       
       // Update operation history with error
       const mintingOperation = state.operationHistory.find(
@@ -302,7 +433,7 @@ export function useAppOperations() {
       if (mintingOperation) {
         updateOperationInHistory(mintingOperation.id, {
           status: 'error',
-          error: errorMessage
+          error: appError.message
         })
       }
     }
@@ -312,9 +443,9 @@ export function useAppOperations() {
   useEffect(() => {
     if (txError && state.mintingState.status === 'mining') {
       console.error('Transaction error:', txError)
-      const errorMessage = txError.message || 'Transaction failed'
       
-      failMinting(errorMessage)
+      const appError = classifyError(txError)
+      failMinting(appError)
       
       // Update operation history with error
       const mintingOperation = state.operationHistory.find(
@@ -323,7 +454,7 @@ export function useAppOperations() {
       if (mintingOperation) {
         updateOperationInHistory(mintingOperation.id, {
           status: 'error',
-          error: errorMessage
+          error: appError.message
         })
       }
     }

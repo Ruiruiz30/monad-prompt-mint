@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { GenerationState, MintingState, ErrorState, ErrorType } from '@/types'
+import { classifyError, reportError } from '@/lib/errorHandling'
 
 // Extended state interfaces for global management
 export interface AppState {
@@ -46,11 +47,11 @@ export type AppAction =
   | { type: 'START_GENERATION' }
   | { type: 'UPDATE_GENERATION_PROGRESS'; payload: { progress: number; status: GenerationState['status'] } }
   | { type: 'GENERATION_SUCCESS'; payload: { imageUrl: string; tokenURI: string } }
-  | { type: 'GENERATION_ERROR'; payload: string }
+  | { type: 'GENERATION_ERROR'; payload: string | Error | ErrorState }
   | { type: 'START_MINTING' }
   | { type: 'UPDATE_MINTING_STATUS'; payload: { status: MintingState['status']; txHash?: string } }
   | { type: 'MINTING_SUCCESS'; payload: { txHash: string } }
-  | { type: 'MINTING_ERROR'; payload: string }
+  | { type: 'MINTING_ERROR'; payload: string | Error | ErrorState }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_GENERATION' }
   | { type: 'RESET_MINTING' }
@@ -131,22 +132,28 @@ function appReducer(state: AppState, action: AppAction): AppState {
           lastUpdated: Date.now()
         }
 
-      case 'GENERATION_ERROR':
+      case 'GENERATION_ERROR': {
+        const appError = typeof action.payload === 'string' 
+          ? classifyError(new Error(action.payload))
+          : classifyError(action.payload)
+        
+        const errorState = appError.toErrorState()
+        
+        // Report error for monitoring
+        reportError(errorState, { operation: 'generation', prompt: state.prompt })
+        
         return {
           ...state,
           generationState: {
             status: 'error',
             progress: 0,
-            error: action.payload
+            error: errorState.message
           },
-          error: {
-            type: ErrorType.GENERATION_FAILED,
-            message: action.payload,
-            retryable: true
-          },
+          error: errorState,
           isLoading: false,
           lastUpdated: Date.now()
         }
+      }
 
       case 'START_MINTING':
         return {
@@ -185,22 +192,28 @@ function appReducer(state: AppState, action: AppAction): AppState {
           lastUpdated: Date.now()
         }
 
-      case 'MINTING_ERROR':
+      case 'MINTING_ERROR': {
+        const appError = typeof action.payload === 'string' 
+          ? classifyError(new Error(action.payload))
+          : classifyError(action.payload)
+        
+        const errorState = appError.toErrorState()
+        
+        // Report error for monitoring
+        reportError(errorState, { operation: 'minting', prompt: state.prompt })
+        
         return {
           ...state,
           mintingState: {
             status: 'error',
             txHash: null,
-            error: action.payload
+            error: errorState.message
           },
-          error: {
-            type: ErrorType.MINTING_FAILED,
-            message: action.payload,
-            retryable: true
-          },
+          error: errorState,
           isLoading: false,
           lastUpdated: Date.now()
         }
+      }
 
       case 'CLEAR_ERROR':
         return {
@@ -313,11 +326,11 @@ interface AppContextType {
   startGeneration: () => void
   updateGenerationProgress: (progress: number, status: GenerationState['status']) => void
   completeGeneration: (imageUrl: string, tokenURI: string) => void
-  failGeneration: (error: string) => void
+  failGeneration: (error: string | Error | ErrorState) => void
   startMinting: () => void
   updateMintingStatus: (status: MintingState['status'], txHash?: string) => void
   completeMinting: (txHash: string) => void
-  failMinting: (error: string) => void
+  failMinting: (error: string | Error | ErrorState) => void
   clearError: () => void
   resetGeneration: () => void
   resetMinting: () => void
@@ -413,7 +426,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'GENERATION_SUCCESS', payload: { imageUrl, tokenURI } })
   }, [])
 
-  const failGeneration = useCallback((error: string) => {
+  const failGeneration = useCallback((error: string | Error | ErrorState) => {
     dispatch({ type: 'GENERATION_ERROR', payload: error })
   }, [])
 
@@ -429,7 +442,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'MINTING_SUCCESS', payload: { txHash } })
   }, [])
 
-  const failMinting = useCallback((error: string) => {
+  const failMinting = useCallback((error: string | Error | ErrorState) => {
     dispatch({ type: 'MINTING_ERROR', payload: error })
   }, [])
 
@@ -446,7 +459,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const addOperationToHistory = useCallback((operation: Omit<OperationHistoryItem, 'id' | 'timestamp'>) => {
-    const id = `${operation.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const id = `${operation.type}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     const historyItem: OperationHistoryItem = {
       ...operation,
       id,

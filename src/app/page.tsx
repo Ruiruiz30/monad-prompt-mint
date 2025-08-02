@@ -7,6 +7,9 @@ import React from 'react'
 import Image from 'next/image'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
+import { LoadingSpinner, ProgressBar, PulsingDots } from '@/components/ui/LoadingSpinner'
+import { SuccessDisplay, SuccessToast } from '@/components/ui/SuccessDisplay'
+import { ErrorDisplay, ErrorToast } from '@/components/ErrorDisplay'
 import { WalletConnection } from '@/components/WalletConnection'
 import { OperationHistory } from '@/components/OperationHistory'
 
@@ -29,6 +32,39 @@ export default function Home() {
     validatePrompt,
     getExplorerLink 
   } = useAppOperations()
+
+  // Toast notification state
+  const [showSuccessToast, setShowSuccessToast] = React.useState(false)
+  const [showErrorToast, setShowErrorToast] = React.useState(false)
+  const [successMessage, setSuccessMessage] = React.useState({ title: '', message: '' })
+
+  // Show success toast when operations complete
+  React.useEffect(() => {
+    if (state.generationState.status === 'completed' && state.generatedImage) {
+      setSuccessMessage({
+        title: 'Image Generated!',
+        message: 'Your AI image has been created and stored on IPFS.'
+      })
+      setShowSuccessToast(true)
+    }
+  }, [state.generationState.status, state.generatedImage])
+
+  React.useEffect(() => {
+    if (state.mintingState.status === 'completed' && state.mintingState.txHash) {
+      setSuccessMessage({
+        title: 'NFT Minted Successfully!',
+        message: 'Your NFT has been created on Monad Testnet.'
+      })
+      setShowSuccessToast(true)
+    }
+  }, [state.mintingState.status, state.mintingState.txHash])
+
+  // Show error toast when errors occur
+  React.useEffect(() => {
+    if (state.error) {
+      setShowErrorToast(true)
+    }
+  }, [state.error])
 
   const handlePromptChange = (value: string) => {
     setPrompt(value)
@@ -66,7 +102,7 @@ export default function Home() {
 
   const finalCanMint = canMint && isConnected && !isWrongNetwork
   const promptValidation = validatePrompt(state.prompt)
-  const promptError = !promptValidation.isValid ? promptValidation.error : undefined
+  const promptError = !promptValidation.isValid ? promptValidation.error?.message : undefined
 
   // Progress text based on generation state
   const getProgressText = () => {
@@ -178,10 +214,10 @@ export default function Home() {
         </div>
 
         {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
           {/* Image Preview Area */}
           <div className="mb-8">
-            <div className="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden">
+            <div className="w-full h-48 sm:h-64 lg:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden">
               {/* Generated Image */}
               {state.generatedImage && state.generationState.status === 'completed' && (
                 <div className="w-full h-full relative">
@@ -204,45 +240,43 @@ export default function Home() {
               {isGenerating && (
                 <div className="text-center text-gray-600 w-full px-4">
                   <div className="mb-4">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 relative">
-                      <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-                      <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                    </div>
+                    <LoadingSpinner size="lg" className="mx-auto mb-4 text-blue-600" />
                   </div>
-                  <p className="text-sm sm:text-base font-medium mb-2">{getProgressText()}</p>
+                  <p className="text-sm sm:text-base font-medium mb-4 flex items-center justify-center gap-2">
+                    {getProgressText()}
+                    <PulsingDots className="text-blue-600" />
+                  </p>
                   
-                  {/* Progress Bar */}
-                  <div className="w-full max-w-xs mx-auto bg-gray-200 rounded-full h-2 mb-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${state.generationState.progress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500">{state.generationState.progress}% complete</p>
+                  {/* Enhanced Progress Bar */}
+                  <ProgressBar 
+                    progress={state.generationState.progress} 
+                    className="max-w-xs mx-auto mb-2"
+                    showPercentage={true}
+                  />
                   
                   {state.generationState.status === 'generating' && (
                     <p className="text-xs text-gray-400 mt-2">This may take 10-30 seconds...</p>
+                  )}
+                  {state.generationState.status === 'uploading' && (
+                    <p className="text-xs text-gray-400 mt-2">Storing on IPFS for permanent access...</p>
                   )}
                 </div>
               )}
 
               {/* Error State */}
-              {state.generationState.status === 'error' && (
+              {state.generationState.status === 'error' && state.error && (
                 <div className="text-center text-gray-600 w-full px-4">
                   <div className="mb-4">
                     <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                   </div>
-                  <p className="text-sm sm:text-base font-medium text-red-600 mb-2">Generation Failed</p>
-                  <p className="text-xs sm:text-sm text-gray-500 mb-4">{state.generationState.error}</p>
-                  <Button
-                    onClick={handleRetryGeneration}
-                    size="sm"
-                    className="mx-auto"
-                  >
-                    Try Again
-                  </Button>
+                  <ErrorDisplay
+                    error={state.error}
+                    onRetry={handleRetryGeneration}
+                    onDismiss={clearError}
+                    className="max-w-md mx-auto"
+                  />
                 </div>
               )}
 
@@ -260,33 +294,35 @@ export default function Home() {
 
             {/* Generation Success Message */}
             {state.generationState.status === 'completed' && state.generatedImage && state.mintingState.status === 'idle' && (
-              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-green-800 font-medium text-sm">Image generated successfully!</p>
-                    <p className="text-green-600 text-xs">Your image has been stored on IPFS and is ready to mint as an NFT.</p>
-                  </div>
-                </div>
+              <div className="mt-4">
+                <SuccessDisplay
+                  title="Image generated successfully!"
+                  message="Your image has been stored on IPFS and is ready to mint as an NFT."
+                  actionButton={
+                    finalCanMint ? {
+                      text: "Mint NFT Now",
+                      onClick: handleMint
+                    } : undefined
+                  }
+                />
               </div>
             )}
 
             {/* Minting Status Messages */}
             {isMinting && (
-              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center">
-                  <div className="w-5 h-5 mr-2">
-                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                  <div>
-                    <p className="text-blue-800 font-medium text-sm">{getMintingStatusText()}</p>
+                  <LoadingSpinner size="sm" className="mr-3 text-blue-600" />
+                  <div className="flex-1">
+                    <p className="text-blue-800 font-medium text-sm flex items-center gap-2">
+                      {getMintingStatusText()}
+                      <PulsingDots className="text-blue-600" />
+                    </p>
                     {state.mintingState.status === 'signing' && (
-                      <p className="text-blue-600 text-xs">Check your wallet for the transaction approval</p>
+                      <p className="text-blue-600 text-xs mt-1">Check your wallet for the transaction approval</p>
                     )}
                     {state.mintingState.status === 'mining' && state.mintingState.txHash && (
-                      <p className="text-blue-600 text-xs">
+                      <p className="text-blue-600 text-xs mt-1">
                         <a 
                           href={getExplorerLink(state.mintingState.txHash)} 
                           target="_blank" 
@@ -304,25 +340,15 @@ export default function Home() {
 
             {/* Minting Success Message */}
             {state.mintingState.status === 'completed' && state.mintingState.txHash && (
-              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-green-800 font-medium text-sm">NFT minted successfully! 🎉</p>
-                    <p className="text-green-600 text-xs">
-                      <a 
-                        href={getExplorerLink(state.mintingState.txHash)} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="underline hover:text-green-800"
-                      >
-                        View your NFT on Monad Explorer
-                      </a>
-                    </p>
-                  </div>
-                </div>
+              <div className="mt-4">
+                <SuccessDisplay
+                  title="NFT minted successfully! 🎉"
+                  message="Your NFT has been created on Monad Testnet blockchain."
+                  actionButton={{
+                    text: "View on Explorer",
+                    onClick: () => window.open(getExplorerLink(state.mintingState.txHash!), '_blank')
+                  }}
+                />
               </div>
             )}
           </div>
@@ -354,7 +380,7 @@ export default function Home() {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Button
                 onClick={handleGenerate}
                 disabled={!canGenerate}
@@ -407,58 +433,27 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Generation Error Display */}
-            {state.generationState.status === 'error' && state.generationState.error && (
-              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-red-800 font-medium text-sm">Generation Failed</p>
-                    <p className="text-red-600 text-sm mt-1">{state.generationState.error}</p>
-                    <div className="mt-3">
-                      <Button
-                        onClick={handleRetryGeneration}
-                        size="sm"
-                        variant="danger"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Minting Error Display */}
-            {state.mintingState.status === 'error' && state.mintingState.error && (
-              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-red-800 font-medium text-sm">Minting Failed</p>
-                    <p className="text-red-600 text-sm mt-1">{state.mintingState.error}</p>
-                    <div className="mt-3">
-                      <Button
-                        onClick={handleRetryMinting}
-                        size="sm"
-                        variant="danger"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+            {/* Error Display */}
+            {state.error && (
+              <div className="mt-4">
+                <ErrorDisplay
+                  error={state.error}
+                  onRetry={
+                    state.generationState.status === 'error' 
+                      ? handleRetryGeneration 
+                      : state.mintingState.status === 'error'
+                      ? handleRetryMinting
+                      : undefined
+                  }
+                  onDismiss={clearError}
+                />
               </div>
             )}
           </div>
         </div>
 
         {/* Wallet Connection Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Wallet Connection</h3>
@@ -474,11 +469,11 @@ export default function Home() {
         <OperationHistory className="mb-8" />
 
         {/* How it Works Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8 text-center">
             How it works
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="text-center group">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform duration-200 shadow-lg">
                 <span className="text-xl font-bold">1</span>
@@ -511,6 +506,35 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <SuccessToast
+        title={successMessage.title}
+        message={successMessage.message}
+        isVisible={showSuccessToast}
+        onDismiss={() => setShowSuccessToast(false)}
+      />
+
+      <ErrorToast
+        error={state.error || { 
+          type: 'UNKNOWN_ERROR' as any, 
+          message: 'Unknown error', 
+          retryable: false, 
+          timestamp: Date.now() 
+        }}
+        isVisible={showErrorToast && !!state.error}
+        onRetry={
+          state.generationState.status === 'error' 
+            ? handleRetryGeneration 
+            : state.mintingState.status === 'error'
+            ? handleRetryMinting
+            : undefined
+        }
+        onDismiss={() => {
+          setShowErrorToast(false)
+          clearError()
+        }}
+      />
     </div>
   );
 }

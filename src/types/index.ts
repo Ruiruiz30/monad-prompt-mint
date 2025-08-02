@@ -66,7 +66,16 @@ export enum ErrorType {
   GENERATION_FAILED = 'GENERATION_FAILED',
   IPFS_UPLOAD_FAILED = 'IPFS_UPLOAD_FAILED',
   MINTING_FAILED = 'MINTING_FAILED',
-  PROMPT_ALREADY_USED = 'PROMPT_ALREADY_USED'
+  PROMPT_ALREADY_USED = 'PROMPT_ALREADY_USED',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
+  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
+  CONTENT_POLICY_ERROR = 'CONTENT_POLICY_ERROR',
+  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
+  USER_REJECTED = 'USER_REJECTED',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
 export interface ErrorState {
@@ -74,6 +83,16 @@ export interface ErrorState {
   message: string;
   details?: unknown;
   retryable: boolean;
+  timestamp: number;
+  retryCount?: number;
+  maxRetries?: number;
+}
+
+export interface RetryConfig {
+  maxRetries: number;
+  baseDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
 }
 
 // Configuration Types
