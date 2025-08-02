@@ -19,7 +19,8 @@ async function main() {
     });
     console.log("Contract verified successfully!");
   } catch (error) {
-    if (error.message.toLowerCase().includes("already verified")) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.toLowerCase().includes("already verified")) {
       console.log("Contract is already verified!");
     } else {
       console.error("Verification failed:", error);

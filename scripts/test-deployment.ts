@@ -25,12 +25,12 @@ async function main() {
     const balance = await ethers.provider.getBalance(deployer.address);
     console.log("Deployer balance:", ethers.formatEther(balance), "ETH");
     
-    if (balance === 0n) {
+    if (balance === BigInt(0)) {
       console.log("⚠️  Deployer has zero balance. Make sure to fund the account with testnet MON tokens.");
     }
 
   } catch (error) {
-    console.log("❌ Error getting signer:", error.message);
+    console.log("❌ Error getting signer:", error instanceof Error ? error.message : String(error));
     console.log("Make sure PRIVATE_KEY is set correctly in .env.local");
     return;
   }
@@ -41,7 +41,7 @@ async function main() {
     console.log("✅ Contract factory created successfully");
     console.log("Contract bytecode length:", PromptMint.bytecode.length);
   } catch (error) {
-    console.log("❌ Error creating contract factory:", error.message);
+    console.log("❌ Error creating contract factory:", error instanceof Error ? error.message : String(error));
     return;
   }
 

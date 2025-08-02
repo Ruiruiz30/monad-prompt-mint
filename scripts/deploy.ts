@@ -26,7 +26,7 @@ async function main() {
 
   // Verify contract on explorer (if not on hardhat network)
   const network = await ethers.provider.getNetwork();
-  if (network.chainId !== 1337n) {
+  if (network.chainId !== BigInt(1337)) {
     console.log("Waiting for block confirmations...");
     await promptMint.deploymentTransaction()?.wait(5);
     
