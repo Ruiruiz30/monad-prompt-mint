@@ -13,6 +13,7 @@ import { SuccessDisplay, SuccessToast } from '@/components/ui/SuccessDisplay'
 import { ErrorDisplay, ErrorToast } from '@/components/ErrorDisplay'
 import { WalletConnection } from '@/components/WalletConnection'
 import { OperationHistory } from '@/components/OperationHistory'
+import { ImageModal } from '@/components/ui/ImageModal'
 
 export default function Home() {
   const { isConnected, isWrongNetwork, address, formatAddress } = useWallet()
@@ -38,6 +39,9 @@ export default function Home() {
   const [showSuccessToast, setShowSuccessToast] = React.useState(false)
   const [showErrorToast, setShowErrorToast] = React.useState(false)
   const [successMessage, setSuccessMessage] = React.useState({ title: '', message: '' })
+  
+  // Image modal state
+  const [isImageModalOpen, setIsImageModalOpen] = React.useState(false)
 
   // Show success toast when operations complete
   React.useEffect(() => {
@@ -226,13 +230,17 @@ export default function Home() {
                     src={state.generatedImage}
                     alt="Generated AI image"
                     fill
-                    className="object-cover rounded-xl"
+                    className="object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity duration-200"
                     onLoad={() => console.log('Image loaded successfully')}
                     onError={() => console.error('Failed to load generated image')}
                     unoptimized // Since this is an external IPFS URL
+                    onClick={() => setIsImageModalOpen(true)}
                   />
                   <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
                     ✓ Ready to mint
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-lg text-xs font-medium">
+                    点击放大
                   </div>
                 </div>
               )}
@@ -535,6 +543,14 @@ export default function Home() {
           setShowErrorToast(false)
           clearError()
         }}
+      />
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageSrc={state.generatedImage || ''}
+        alt="Generated AI image"
       />
     </div>
   );
