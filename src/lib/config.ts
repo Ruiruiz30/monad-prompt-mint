@@ -16,10 +16,12 @@ function validateEnvVar(name: string, value: string | undefined, defaultValue?: 
 }
 
 // Server-side configuration (includes sensitive data)
-export function getServerConfig(): Pick<AppConfig, 'replicateApiToken' | 'web3StorageToken'> {
+export function getServerConfig(): Pick<AppConfig, 'replicateApiToken' | 'web3StorageToken'> & { pinataApiKey?: string; pinataSecretKey?: string } {
   return {
     replicateApiToken: validateEnvVar('REPLICATE_API_TOKEN', process.env.REPLICATE_API_TOKEN, ''),
     web3StorageToken: validateEnvVar('WEB3_STORAGE_TOKEN', process.env.WEB3_STORAGE_TOKEN, ''),
+    pinataApiKey: validateEnvVar('PINATA_API_KEY', process.env.PINATA_API_KEY, ''),
+    pinataSecretKey: validateEnvVar('PINATA_SECRET_KEY', process.env.PINATA_SECRET_KEY, ''),
   };
 }
 

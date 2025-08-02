@@ -11,6 +11,46 @@ async function downloadImageAsFile(imageUrl: string, filename: string): Promise<
   return new File([blob], filename, { type: blob.type });
 }
 
+// Upload file to Pinata IPFS
+async function uploadToPinata(file: File): Promise<string> {
+  const pinataApiKey = process.env.PINATA_API_KEY;
+  const pinataSecretKey = process.env.PINATA_SECRET_KEY;
+  
+  if (!pinataApiKey || !pinataSecretKey) {
+    throw new Error('Pinata API keys not configured');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  // Add metadata
+  const metadata = JSON.stringify({
+    name: file.name,
+    keyvalues: {
+      uploadedBy: 'PromptMint',
+      timestamp: new Date().toISOString()
+    }
+  });
+  formData.append('pinataMetadata', metadata);
+
+  const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+    method: 'POST',
+    headers: {
+      'pinata_api_key': pinataApiKey,
+      'pinata_secret_api_key': pinataSecretKey,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Pinata upload failed: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json();
+  return result.IpfsHash;
+}
+
 // Upload image and metadata to IPFS
 export async function uploadToIPFS(
   imageUrl: string,
@@ -27,7 +67,7 @@ export async function uploadToIPFS(
       const imageFile = await downloadImageAsFile(imageUrl, 'generated-image.png');
       
       // Upload image to IPFS
-      const imageCid = await uploadFile(imageFile);
+      const imageCid = await uploadToPinata(imageFile);
       const imageIPFSUrl = `ipfs://${imageCid}`;
       
       console.log('Image uploaded to IPFS:', imageIPFSUrl);
@@ -63,7 +103,7 @@ export async function uploadToIPFS(
         { type: 'application/json' }
       );
       
-      const metadataCid = await uploadFile(metadataFile);
+      const metadataCid = await uploadToPinata(metadataFile);
       const tokenURI = `ipfs://${metadataCid}`;
       
       console.log('Metadata uploaded to IPFS:', tokenURI);
@@ -93,29 +133,27 @@ export async function uploadToIPFS(
   throw new Error(`IPFS upload failed after ${retryCount} attempts: ${lastError?.message}`);
 }
 
-// Upload a single file to IPFS (mock implementation for development)
-async function uploadFile(file: File): Promise<string> {
-  try {
-    // TODO: Replace with actual Web3.Storage implementation
-    // For now, we'll use a mock CID for development
-    const mockCid = generateMockCid(file.name);
-    
-    console.log(`Mock upload: ${file.name} -> ${mockCid}`);
-    
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return mockCid;
-    
-  } catch (error) {
-    console.error('File upload failed:', error);
-    throw new Error(`Failed to upload ${file.name} to IPFS`);
+// Test Pinata connection
+export async function testPinataConnection(): Promise<boolean> {
+  const pinataApiKey = process.env.PINATA_API_KEY;
+  const pinataSecretKey = process.env.PINATA_SECRET_KEY;
+  
+  if (!pinataApiKey || !pinataSecretKey) {
+    return false;
   }
-}
 
-// Generate a mock CID for development purposes
-function generateMockCid(filename: string): string {
-  const timestamp = Date.now();
-  const hash = btoa(`${filename}-${timestamp}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  return `Qm${hash.substring(0, 44)}`;
+  try {
+    const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
+      method: 'GET',
+      headers: {
+        'pinata_api_key': pinataApiKey,
+        'pinata_secret_api_key': pinataSecretKey,
+      },
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Pinata connection test failed:', error);
+    return false;
+  }
 }
