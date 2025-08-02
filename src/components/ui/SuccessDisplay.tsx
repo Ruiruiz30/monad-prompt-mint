@@ -49,7 +49,7 @@ export function SuccessDisplay({
             <div className="mt-4">
               <Button
                 onClick={actionButton.onClick}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="bg-white hover:bg-green-50 text-green-700 border-green-300"
               >

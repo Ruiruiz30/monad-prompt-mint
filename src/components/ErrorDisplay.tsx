@@ -40,7 +40,7 @@ export function ErrorDisplay({ error, onRetry, onDismiss, className = '' }: Erro
           </h3>
           <div className="mt-2 text-sm text-red-700">
             <p>{friendlyMessage}</p>
-            {error.details && process.env.NODE_ENV === 'development' && (
+            {error.details && process.env.NODE_ENV === 'development' ? (
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs text-red-600 hover:text-red-800">
                   Technical Details
@@ -52,13 +52,13 @@ export function ErrorDisplay({ error, onRetry, onDismiss, className = '' }: Erro
                   }
                 </pre>
               </details>
-            )}
+            ) : null}
           </div>
           <div className="mt-4 flex space-x-2">
             {showRetry && onRetry && (
               <Button
                 onClick={onRetry}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="bg-white hover:bg-red-50 text-red-700 border-red-300"
               >
@@ -68,7 +68,7 @@ export function ErrorDisplay({ error, onRetry, onDismiss, className = '' }: Erro
             {onDismiss && (
               <Button
                 onClick={onDismiss}
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 className="text-red-700 hover:bg-red-50"
               >

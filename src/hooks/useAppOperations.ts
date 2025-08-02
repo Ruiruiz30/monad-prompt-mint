@@ -332,13 +332,19 @@ export function useAppOperations() {
       resetWrite()
 
       // Call the smart contract mint function with retry logic
+      if (!state.tokenURI) {
+        throw new Error('Token URI is required for minting')
+      }
+
+      const tokenURI = state.tokenURI; // Type-safe local variable
+
       await withRetry(
         async () => {
           await writeContract({
             address: config.contractAddress as `0x${string}`,
             abi: PROMPT_MINT_ABI,
             functionName: 'mint',
-            args: [promptHash, state.tokenURI],
+            args: [promptHash, tokenURI],
           })
         },
         {

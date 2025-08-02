@@ -3,6 +3,7 @@
 import { useWallet } from '@/hooks/useWallet'
 import { useAppContext } from '@/contexts/AppContext'
 import { useAppOperations } from '@/hooks/useAppOperations'
+import { ErrorType } from '@/types'
 import React from 'react'
 import Image from 'next/image'
 import { Textarea } from '@/components/ui/Textarea'
@@ -517,7 +518,7 @@ export default function Home() {
 
       <ErrorToast
         error={state.error || { 
-          type: 'UNKNOWN_ERROR' as any, 
+          type: ErrorType.UNKNOWN_ERROR, 
           message: 'Unknown error', 
           retryable: false, 
           timestamp: Date.now() 

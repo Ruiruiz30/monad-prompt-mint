@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
-import { GenerationState, MintingState, ErrorState, ErrorType } from '@/types'
+import { GenerationState, MintingState, ErrorState } from '@/types'
 import { classifyError, reportError } from '@/lib/errorHandling'
 
 // Extended state interfaces for global management
