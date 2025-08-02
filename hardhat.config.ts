@@ -1,10 +1,15 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
-import * as dotenv from "dotenv";
 
-// Load environment variables from .env.local
-dotenv.config({ path: ".env.local" });
+// Load environment variables from .env.local only in development
+if (process.env.NODE_ENV !== "production") {
+  try {
+    require("dotenv").config({ path: ".env.local" });
+  } catch (error) {
+    // dotenv not available, use process.env directly
+  }
+}
 
 const config: HardhatUserConfig = {
   solidity: {
