@@ -36,14 +36,14 @@ describe('/api/generate', () => {
       images: {
         generate: mockGenerate
       }
-    } as unknown as typeof OpenAI))
+    } as any))
 
     // Mock environment variables
     process.env.OPENAI_API_KEY = 'test-api-key'
     process.env.WEB3_STORAGE_TOKEN = 'test-storage-token'
   })
 
-  const createMockRequest = (body: Record<string, unknown>): NextRequest => {
+  const createMockRequest = (body: any): NextRequest => {
     return new NextRequest('http://localhost:3000/api/generate', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -191,7 +191,7 @@ describe('/api/generate', () => {
   describe('OpenAI API errors', () => {
     it('should handle OpenAI rate limiting', async () => {
       const rateLimitError = new Error('Rate limit exceeded')
-             ;(rateLimitError as Error & { status?: number }).status = 429
+      ;(rateLimitError as any).status = 429
       mockGenerate.mockRejectedValue(rateLimitError)
 
       const request = createMockRequest({ prompt: 'Test prompt' })
@@ -208,8 +208,8 @@ describe('/api/generate', () => {
 
     it('should handle OpenAI content policy violations', async () => {
       const contentPolicyError = new Error('Content policy violation')
-             ;(contentPolicyError as Error & { status?: number; code?: string }).status = 400
-       ;(contentPolicyError as Error & { status?: number; code?: string }).code = 'content_policy_violation'
+      ;(contentPolicyError as any).status = 400
+      ;(contentPolicyError as any).code = 'content_policy_violation'
       mockGenerate.mockRejectedValue(contentPolicyError)
 
       const request = createMockRequest({ prompt: 'Inappropriate content' })
@@ -226,7 +226,7 @@ describe('/api/generate', () => {
 
     it('should handle OpenAI authentication errors', async () => {
       const authError = new Error('Invalid API key')
-             ;(authError as Error & { status?: number }).status = 401
+      ;(authError as any).status = 401
       mockGenerate.mockRejectedValue(authError)
 
       const request = createMockRequest({ prompt: 'Test prompt' })
@@ -243,7 +243,7 @@ describe('/api/generate', () => {
 
     it('should handle OpenAI timeout errors', async () => {
       const timeoutError = new Error('Request timeout')
-             ;(timeoutError as Error & { code?: string }).code = 'ECONNABORTED'
+      ;(timeoutError as any).code = 'ECONNABORTED'
       mockGenerate.mockRejectedValue(timeoutError)
 
       const request = createMockRequest({ prompt: 'Test prompt' })
@@ -302,7 +302,7 @@ describe('/api/generate', () => {
       }
 
       const networkError = new Error('Network error')
-             ;(networkError as Error & { code?: string }).code = 'ENOTFOUND'
+      ;(networkError as any).code = 'ENOTFOUND'
 
       mockGenerate.mockResolvedValue(mockImageResponse)
       mockUploadToIPFS.mockRejectedValue(networkError)

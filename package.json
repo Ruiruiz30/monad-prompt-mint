@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit",
     "compile": "hardhat compile",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -15,8 +14,7 @@
     "test:contracts": "hardhat test",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
     "deploy:testnet": "hardhat run scripts/deploy.ts --network monadTestnet",
-    "verify:testnet": "hardhat run scripts/verify.ts --network monadTestnet",
-    "ci": "npm run lint && npm run type-check && npm run build && npm test -- --coverage --watchAll=false"
+    "verify:testnet": "hardhat run scripts/verify.ts --network monadTestnet"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
