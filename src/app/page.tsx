@@ -27,6 +27,12 @@ export default function Home() {
     isMinting,
     clearError 
   } = useAppContext()
+  const [isClient, setIsClient] = React.useState(false)
+
+  // 确保组件在客户端渲染
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
   const { 
     generateImage, 
     mintNFT, 
@@ -200,7 +206,7 @@ export default function Home() {
             </div>
           )}
 
-          {isConnected && !isWrongNetwork && (
+          {isClient && isConnected && !isWrongNetwork && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">

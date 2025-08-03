@@ -29,6 +29,12 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
   const [chainInfo, setChainInfo] = useState<ChainInfo | null>(null)
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
   const [isLoadingChainInfo, setIsLoadingChainInfo] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  // 确保组件在客户端渲染
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // 过滤出成功铸造的NFT
   const mintedNFTs = state.operationHistory.filter(
@@ -97,6 +103,24 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
     return formatAddress(address)
   }
 
+  // 在客户端渲染之前显示加载状态
+  if (!isClient) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT 历史画廊</h3>
+          <div className="text-center text-gray-500 py-8">
+            <div className="animate-pulse">
+              <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (mintedNFTs.length === 0) {
     return (
       <div className={`space-y-6 ${className}`}>
@@ -104,7 +128,7 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT 历史画廊</h3>
           <div className="text-center text-gray-500 py-8">
             <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 002 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-sm">还没有铸造的NFT</p>
             <p className="text-xs text-gray-400 mt-1">铸造NFT后，它们将显示在这里</p>
