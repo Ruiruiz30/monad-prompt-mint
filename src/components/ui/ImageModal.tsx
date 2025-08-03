@@ -30,25 +30,25 @@ export const ImageModal: React.FC<ImageModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur-sm"
       onClick={handleBackdropClick}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div className="relative max-w-[90vw] max-h-[90vh] p-4">
+      <div className="relative w-full h-full flex items-center justify-center p-4">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 z-10 w-8 h-8 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-75 transition-all duration-200"
-          aria-label="关闭图片"
+          className="absolute top-4 right-4 z-10 w-10 h-10 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-75 transition-all duration-200"
+          aria-label="Close image"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        {/* Image */}
-        <div className="relative">
+        {/* Image container */}
+        <div className="relative w-full h-full flex items-center justify-center">
           <img
             src={imageSrc}
             alt={alt}
@@ -63,14 +63,14 @@ export const ImageModal: React.FC<ImageModalProps> = ({
           <a
             href={imageSrc}
             download={`generated-image-${Date.now()}.png`}
-            className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-opacity-75 transition-all duration-200"
+            className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-opacity-75 transition-all duration-200"
             target="_blank"
             rel="noopener noreferrer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            下载
+            Download
           </a>
         </div>
       </div>

@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import { useAppContext, OperationHistoryItem } from '@/contexts/AppContext'
 import { formatDistanceToNow } from 'date-fns'
+import Image from 'next/image'
+import { ImageModal } from '@/components/ui/ImageModal'
 
 interface OperationHistoryProps {
   className?: string
@@ -12,6 +14,7 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
   const { state } = useAppContext()
   const [isExpanded, setIsExpanded] = useState(false)
   const [filter, setFilter] = useState<'all' | 'generation' | 'minting'>('all')
+  const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
 
   const filteredHistory = state.operationHistory.filter(item => {
     if (filter === 'all') return true
@@ -61,6 +64,10 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
         </svg>
       )
     }
+  }
+
+  const handleImageClick = (imageUrl: string, prompt: string) => {
+    setSelectedImage({ src: imageUrl, alt: `Generated image: ${prompt}` })
   }
 
   if (state.operationHistory.length === 0) {
@@ -174,6 +181,23 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
                     &ldquo;{item.prompt}&rdquo;
                   </p>
                   
+                  {/* Image preview for successful generation operations */}
+                  {item.type === 'generation' && item.status === 'success' && item.result?.imageUrl && (
+                    <div className="mb-2">
+                      <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity duration-200">
+                        <Image
+                          src={item.result.imageUrl}
+                          alt={`Generated image: ${item.prompt}`}
+                          fill
+                          className="object-cover"
+                          onClick={() => handleImageClick(item.result!.imageUrl!, item.prompt)}
+                          unoptimized
+                        />
+
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between">
                     <span className={`text-xs ${
                       item.status === 'success' ? 'text-green-600' :
@@ -236,6 +260,16 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
           </a>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          imageSrc={selectedImage.src}
+          alt={selectedImage.alt}
+        />
+      )}
     </div>
   )
 }
