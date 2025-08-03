@@ -271,9 +271,9 @@ describe('OperationHistory', () => {
       render(<OperationHistory />)
       
       // Should show first 5 items
-      expect(screen.getByText('"Test prompt 0"')).toBeInTheDocument()
-      expect(screen.getByText('"Test prompt 4"')).toBeInTheDocument()
-      expect(screen.queryByText('"Test prompt 5"')).not.toBeInTheDocument()
+      expect(screen.getByText(/Test prompt 0/)).toBeInTheDocument()
+      expect(screen.getByText(/Test prompt 4/)).toBeInTheDocument()
+      expect(screen.queryByText(/Test prompt 5/)).not.toBeInTheDocument()
       
       // Should show expand button
       expect(screen.getByText('Show 5 More')).toBeInTheDocument()
@@ -300,8 +300,8 @@ describe('OperationHistory', () => {
       fireEvent.click(screen.getByText('Show 3 More'))
       
       // Should show all items
-      expect(screen.getByText('"Test prompt 0"')).toBeInTheDocument()
-      expect(screen.getByText('"Test prompt 7"')).toBeInTheDocument()
+      expect(screen.getByText(/Test prompt 0/)).toBeInTheDocument()
+      expect(screen.getByText(/Test prompt 7/)).toBeInTheDocument()
       
       // Should show collapse button
       expect(screen.getByText('Show Less')).toBeInTheDocument()
@@ -327,11 +327,11 @@ describe('OperationHistory', () => {
       
       // Expand first
       fireEvent.click(screen.getByText('Show 3 More'))
-      expect(screen.getByText('"Test prompt 7"')).toBeInTheDocument()
+      expect(screen.getByText(/Test prompt 7/)).toBeInTheDocument()
       
       // Then collapse
       fireEvent.click(screen.getByText('Show Less'))
-      expect(screen.queryByText('"Test prompt 7"')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Test prompt 7/)).not.toBeInTheDocument()
       expect(screen.getByText('Show 3 More')).toBeInTheDocument()
     })
 

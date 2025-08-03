@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAppContext, OperationHistoryItem } from '@/contexts/AppContext'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
@@ -20,21 +20,17 @@ interface NFTMetadata {
   }>
 }
 
-interface ChainInfo extends RealChainInfo {}
+// 使用真实的ChainInfo类型
+type ChainInfo = RealChainInfo
 
 export function NFTGallery({ className = '' }: NFTGalleryProps) {
   const { state } = useAppContext()
   const [selectedNFT, setSelectedNFT] = useState<OperationHistoryItem | null>(null)
   const [nftMetadata, setNftMetadata] = useState<NFTMetadata | null>(null)
   const [chainInfo, setChainInfo] = useState<ChainInfo | null>(null)
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false) // eslint-disable-line @typescript-eslint/no-unused-vars
   const [isLoadingChainInfo, setIsLoadingChainInfo] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-
-  // 确保组件在客户端渲染
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+  const [error, setError] = useState<string | null>(null)
 
   // 过滤出成功铸造的NFT
   const mintedNFTs = state.operationHistory.filter(
@@ -42,26 +38,31 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
   )
 
   // 获取NFT元数据
-  const fetchNFTMetadata = async (tokenURI: string) => {
+  const fetchNFTMetadata = useCallback(async (tokenURI: string) => {
     if (!tokenURI) return
     
     setIsLoadingMetadata(true)
+    setError(null)
     try {
       const response = await fetch(tokenURI)
       if (response.ok) {
         const metadata = await response.json()
         setNftMetadata(metadata)
+      } else {
+        throw new Error(`Failed to fetch metadata: ${response.status}`)
       }
-    } catch (error) {
-      console.error('Failed to fetch NFT metadata:', error)
+    } catch (err) {
+      console.error('Failed to fetch NFT metadata:', err)
+      setError('无法获取NFT元数据')
     } finally {
       setIsLoadingMetadata(false)
     }
-  }
+  }, [])
 
   // 获取链上信息
-  const fetchChainInfo = async (txHash: string) => {
+  const fetchChainInfo = useCallback(async (txHash: string) => {
     setIsLoadingChainInfo(true)
+    setError(null)
     try {
       const chainInfo = await getTransactionInfo(txHash)
       if (chainInfo) {
@@ -81,13 +82,15 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
         }
         setChainInfo(mockChainInfo)
       }
-    } catch (error) {
-      console.error('Failed to fetch chain info:', error)
+    } catch (err) {
+      console.error('Failed to fetch chain info:', err)
+      setError('无法获取链上信息')
     } finally {
       setIsLoadingChainInfo(false)
     }
-  }
+  }, [])
 
+  // 当选择NFT时获取详细信息
   useEffect(() => {
     if (selectedNFT) {
       if (selectedNFT.result?.tokenURI) {
@@ -97,29 +100,27 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
         fetchChainInfo(selectedNFT.result.txHash)
       }
     }
-  }, [selectedNFT])
+  }, [selectedNFT, fetchNFTMetadata, fetchChainInfo])
 
   const formatAddressLocal = (address: string) => {
     return formatAddress(address)
   }
 
-  // 在客户端渲染之前显示加载状态
-  if (!isClient) {
-    return (
-      <div className={`space-y-6 ${className}`}>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT 历史画廊</h3>
-          <div className="text-center text-gray-500 py-8">
-            <div className="animate-pulse">
-              <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const handleCloseModal = useCallback(() => {
+    setSelectedNFT(null)
+    setNftMetadata(null)
+    setChainInfo(null)
+    setError(null)
+  }, [])
+
+  const handleCopyToClipboard = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      // 可以添加一个toast通知
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+    }
+  }, [])
 
   if (mintedNFTs.length === 0) {
     return (
@@ -127,10 +128,14 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT 历史画廊</h3>
           <div className="text-center text-gray-500 py-8">
-            <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 002 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm">还没有铸造的NFT</p>
+            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-xl relative overflow-hidden group hover:scale-105 transition-transform duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent group-hover:from-white/30 transition-all duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-tl from-transparent to-black/10"></div>
+              <svg className="w-10 h-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-700">还没有铸造的NFT</p>
             <p className="text-xs text-gray-400 mt-1">铸造NFT后，它们将显示在这里</p>
           </div>
         </div>
@@ -154,6 +159,14 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
               key={nft.id}
               className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
               onClick={() => setSelectedNFT(nft)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedNFT(nft)
+                }
+              }}
             >
               <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                 {nft.result?.imageUrl ? (
@@ -166,9 +179,11 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
                     unoptimized
                   />
                 ) : (
-                  <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                 )}
               </div>
               
@@ -191,24 +206,33 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
 
       {/* NFT详情模态框 */}
       {selectedNFT && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={handleCloseModal}
+        >
+          <div 
+            className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">NFT 详细信息</h3>
                 <button
-                  onClick={() => {
-                    setSelectedNFT(null)
-                    setNftMetadata(null)
-                    setChainInfo(null)
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="关闭"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
+
+              {error && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 左侧：图片和基本信息 */}
@@ -224,10 +248,13 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
                         unoptimized
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
-                        </svg>
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg">
+                        <div className="text-center">
+                          <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-xs text-gray-500">图片不可用</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -329,9 +356,10 @@ export function NFTGallery({ className = '' }: NFTGalleryProps) {
                             {formatAddressLocal(selectedNFT.result?.txHash || '')}
                           </code>
                           <button
-                            onClick={() => navigator.clipboard.writeText(selectedNFT.result?.txHash || '')}
-                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => handleCopyToClipboard(selectedNFT.result?.txHash || '')}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
                             title="复制交易哈希"
+                            aria-label="复制交易哈希"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />

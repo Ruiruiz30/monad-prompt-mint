@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useAppContext, OperationHistoryItem } from '@/contexts/AppContext'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -12,12 +12,6 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
   const { state } = useAppContext()
   const [isExpanded, setIsExpanded] = useState(false)
   const [filter, setFilter] = useState<'all' | 'generation' | 'minting'>('all')
-  const [isClient, setIsClient] = useState(false)
-
-  // 确保组件在客户端渲染
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   const filteredHistory = state.operationHistory.filter(item => {
     if (filter === 'all') return true
@@ -67,24 +61,6 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
         </svg>
       )
     }
-  }
-
-  // 在客户端渲染之前显示加载状态
-  if (!isClient) {
-    return (
-      <div className={`space-y-6 ${className}`}>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Operation History</h3>
-          <div className="text-center text-gray-500 py-8">
-            <div className="animate-pulse">
-              <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   if (state.operationHistory.length === 0) {

@@ -22,12 +22,6 @@ export function WalletConnection({ onConnectionChange }: WalletConnectionCompone
   
   const [showConnectors, setShowConnectors] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-
-  // 确保组件在客户端渲染
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   // Notify parent component of connection changes
   useEffect(() => {
@@ -52,20 +46,6 @@ export function WalletConnection({ onConnectionChange }: WalletConnectionCompone
     } finally {
       setIsSwitching(false)
     }
-  }
-
-  // 在客户端渲染之前显示加载状态
-  if (!isClient) {
-    return (
-      <div className="relative">
-        <button
-          disabled
-          className="px-6 py-2 bg-gray-400 text-white rounded-lg disabled:opacity-50 cursor-not-allowed font-medium"
-        >
-          Loading...
-        </button>
-      </div>
-    )
   }
 
   if (isConnected && !isWrongNetwork) {

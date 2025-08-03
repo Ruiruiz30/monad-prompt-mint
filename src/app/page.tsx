@@ -27,12 +27,6 @@ export default function Home() {
     isMinting,
     clearError 
   } = useAppContext()
-  const [isClient, setIsClient] = React.useState(false)
-
-  // 确保组件在客户端渲染
-  React.useEffect(() => {
-    setIsClient(true)
-  }, [])
   const { 
     generateImage, 
     mintNFT, 
@@ -112,7 +106,7 @@ export default function Home() {
 
 
 
-  const finalCanMint = canMint && isClient && isConnected && !isWrongNetwork
+  const finalCanMint = canMint && isConnected && !isWrongNetwork
   const promptValidation = validatePrompt(state.prompt)
   const promptError = !promptValidation.isValid ? promptValidation.error?.message : undefined
 
@@ -169,7 +163,7 @@ export default function Home() {
 
         {/* Status Banners */}
         <div className="space-y-4 mb-8">
-          {isClient && !isConnected && (
+          {!isConnected && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -188,7 +182,7 @@ export default function Home() {
             </div>
           )}
 
-          {isClient && isWrongNetwork && (
+          {isWrongNetwork && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -206,7 +200,7 @@ export default function Home() {
             </div>
           )}
 
-          {isClient && isConnected && !isWrongNetwork && (
+          {isConnected && !isWrongNetwork && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -247,7 +241,7 @@ export default function Home() {
                     ✓ Ready to mint
                   </div>
                   <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-lg text-xs font-medium">
-                    点击放大
+                    Click to enlarge
                   </div>
                 </div>
               )}
@@ -420,9 +414,7 @@ export default function Home() {
                 size="lg"
                 className="flex-1 sm:flex-none sm:min-w-[160px]"
                 title={
-                  !isClient
-                    ? 'Loading...'
-                    : !isConnected 
+                  !isConnected 
                     ? 'Connect wallet to Monad Testnet to mint NFTs'
                     : isWrongNetwork
                     ? 'Switch to Monad Testnet to mint NFTs'
@@ -438,9 +430,7 @@ export default function Home() {
             {/* Helper Text */}
             <div className="text-center">
               <p className="text-sm text-gray-500">
-                {!isClient
-                  ? 'Loading wallet connection...'
-                  : !isConnected 
+                {!isConnected 
                   ? 'Connect your wallet to mint NFTs after generating an image'
                   : isWrongNetwork
                   ? 'Switch to Monad Testnet to enable minting'

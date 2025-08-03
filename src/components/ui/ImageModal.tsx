@@ -1,5 +1,6 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import Image from 'next/image';
+// import { cn } from '@/lib/utils' // eslint-disable-line @typescript-eslint/no-unused-vars;
 
 interface ImageModalProps {
   isOpen: boolean;
@@ -49,14 +50,17 @@ export const ImageModal: React.FC<ImageModalProps> = ({
 
         {/* Image */}
         <div className="relative">
-          <img
+          <Image
             src={imageSrc}
             alt={alt}
+            width={800}
+            height={800}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             onError={(e) => {
               console.error('Failed to load image in modal:', imageSrc);
               e.currentTarget.style.display = 'none';
             }}
+            unoptimized
           />
           
           {/* Download button */}

@@ -16,7 +16,7 @@ export interface NFTInfo {
   contractAddress: string
   owner: string
   tokenURI: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 // Monad Testnet RPC URL

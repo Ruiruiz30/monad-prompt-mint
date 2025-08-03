@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
 import "./globals.css";
 import { getClientConfig } from "@/lib/config";
 import { Providers } from "@/components/providers";
@@ -45,7 +46,7 @@ export default function RootLayout({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                   <div className="flex items-center space-x-3">
-                    <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
+                    <Image src="/logo.svg" alt="Logo" width={32} height={32} className="w-8 h-8" />
                     <h1 className="text-xl font-bold text-gray-900">
                       {config.appName}
                     </h1>
