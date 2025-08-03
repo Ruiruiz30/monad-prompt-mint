@@ -402,17 +402,58 @@ export function useAppOperations() {
   // Handle transaction completion
   useEffect(() => {
     if (isTxSuccess && state.mintingState.status === 'mining' && txHash) {
-      completeMinting(txHash)
-      
-      // Update operation history with success
-      const mintingOperation = state.operationHistory.find(
-        op => op.type === 'minting' && op.status === 'pending'
-      )
-      if (mintingOperation) {
-        updateOperationInHistory(mintingOperation.id, {
-          status: 'success'
-        })
+      // Get transaction receipt to extract Token ID from event logs
+      const getTransactionReceipt = async () => {
+        try {
+          const { data: receipt } = await fetch(`https://testnet.monadexplorer.com/api/v2/transactions/${txHash}`)
+            .then(res => res.json())
+          
+          // Look for PromptMinted event in logs
+          let tokenId: string | undefined
+          if (receipt?.logs) {
+            for (const log of receipt.logs) {
+              // Check if this is a PromptMinted event (event signature: 0x...)
+              if (log.topics && log.topics[0] === '0x...') { // We'll need the actual event signature
+                // Parse the event data to extract tokenId
+                // The tokenId is typically in the third topic or in the data field
+                tokenId = log.data // This is a simplified approach
+                break
+              }
+            }
+          }
+          
+          completeMinting(txHash)
+          
+          // Update operation history with success and token ID
+          const mintingOperation = state.operationHistory.find(
+            op => op.type === 'minting' && op.status === 'pending'
+          )
+          if (mintingOperation) {
+            updateOperationInHistory(mintingOperation.id, {
+              status: 'success',
+              result: {
+                ...mintingOperation.result,
+                tokenId
+              }
+            })
+          }
+        } catch (error) {
+          console.warn('Failed to get transaction receipt:', error)
+          // Fallback to just completing without token ID
+          completeMinting(txHash)
+          
+          const mintingOperation = state.operationHistory.find(
+            op => op.type === 'minting' && op.status === 'pending'
+          )
+          if (mintingOperation) {
+            updateOperationInHistory(mintingOperation.id, {
+              status: 'success'
+            })
+          }
+        }
       }
+      
+      getTransactionReceipt()
     }
   }, [isTxSuccess, state.mintingState.status, txHash, state.operationHistory, completeMinting, updateOperationInHistory])
 

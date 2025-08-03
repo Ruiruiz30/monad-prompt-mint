@@ -37,6 +37,7 @@ export interface OperationHistoryItem {
     tokenURI?: string
     txHash?: string
     explorerUrl?: string
+    tokenId?: string
   }
   error?: string
 }

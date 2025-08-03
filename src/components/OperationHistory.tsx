@@ -70,6 +70,10 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
     setSelectedImage({ src: imageUrl, alt: `Generated image: ${prompt}` })
   }
 
+  const formatTxHash = (txHash: string) => {
+    return `${txHash.slice(0, 6)}...${txHash.slice(-4)}`
+  }
+
   if (state.operationHistory.length === 0) {
     return (
       <div className={`space-y-6 ${className}`}>
@@ -162,24 +166,24 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
           <div className="space-y-4">
             {displayedHistory.map((item) => (
               <div key={item.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0 mt-1">
-                  {getTypeIcon(item.type)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {getStatusIcon(item.status)}
-                    <span className="text-sm font-medium text-gray-900 capitalize">
-                      {item.type}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-                    </span>
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                    &ldquo;{item.prompt}&rdquo;
-                  </p>
+                    <div className="flex-shrink-0 mt-1">
+                      {getTypeIcon(item.type)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getStatusIcon(item.status)}
+                        <span className="text-sm font-medium text-gray-900 capitalize">
+                          {item.type}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        &ldquo;{item.prompt}&rdquo;
+                      </p>
                   
                   {/* Image preview for successful generation operations */}
                   {item.type === 'generation' && item.status === 'success' && item.result?.imageUrl && (
@@ -197,29 +201,97 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
                       </div>
                     </div>
                   )}
-                  
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs ${
-                      item.status === 'success' ? 'text-green-600' :
-                      item.status === 'error' ? 'text-red-600' :
-                      'text-blue-600'
-                    }`}>
-                      {getStatusText(item)}
-                    </span>
-                    
+
+                  {/* Blockchain information for successful minting operations */}
+                  {item.type === 'minting' && item.status === 'success' && item.result?.txHash && (
+                    <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-xs font-medium text-green-800">Blockchain Transaction</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600">Tx Hash:</span>
+                        <code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-800">
+                          {formatTxHash(item.result!.txHash)}
+                        </code>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(item.result!.txHash)}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                          title="Copy transaction hash"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                      {item.result.tokenId && (
+                        <div className="mt-1">
+                          <span className="text-xs text-gray-600">Token ID:</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-800">
+                              #{item.result.tokenId}
+                            </code>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(item.result!.tokenId || '')}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                              title="Copy token ID"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {item.result.tokenURI && (
+                        <div className="mt-1">
+                          <span className="text-xs text-gray-600">Token URI:</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-800 truncate max-w-32">
+                              {item.result.tokenURI}
+                            </code>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(item.result!.tokenURI!)}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                              title="Copy token URI"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                      
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs ${
+                          item.status === 'success' ? 'text-green-600' :
+                          item.status === 'error' ? 'text-red-600' :
+                          'text-blue-600'
+                        }`}>
+                          {getStatusText(item)}
+                        </span>
+                        
                     {item.result?.txHash && (
                       <a
                         href={item.result.explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:text-blue-800 underline"
-                      >
-                        View on Explorer
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
+                              target="_blank"
+                              rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                            >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                              View on Explorer
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
             ))}
           </div>
 
@@ -263,7 +335,7 @@ export function OperationHistory({ className = '' }: OperationHistoryProps) {
 
       {/* Image Modal */}
       {selectedImage && (
-        <ImageModal
+      <ImageModal
           isOpen={!!selectedImage}
           onClose={() => setSelectedImage(null)}
           imageSrc={selectedImage.src}
