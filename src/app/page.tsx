@@ -112,7 +112,7 @@ export default function Home() {
 
 
 
-  const finalCanMint = canMint && isConnected && !isWrongNetwork
+  const finalCanMint = canMint && isClient && isConnected && !isWrongNetwork
   const promptValidation = validatePrompt(state.prompt)
   const promptError = !promptValidation.isValid ? promptValidation.error?.message : undefined
 
@@ -169,7 +169,7 @@ export default function Home() {
 
         {/* Status Banners */}
         <div className="space-y-4 mb-8">
-          {!isConnected && (
+          {isClient && !isConnected && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -188,7 +188,7 @@ export default function Home() {
             </div>
           )}
 
-          {isWrongNetwork && (
+          {isClient && isWrongNetwork && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -420,7 +420,9 @@ export default function Home() {
                 size="lg"
                 className="flex-1 sm:flex-none sm:min-w-[160px]"
                 title={
-                  !isConnected 
+                  !isClient
+                    ? 'Loading...'
+                    : !isConnected 
                     ? 'Connect wallet to Monad Testnet to mint NFTs'
                     : isWrongNetwork
                     ? 'Switch to Monad Testnet to mint NFTs'
@@ -436,7 +438,9 @@ export default function Home() {
             {/* Helper Text */}
             <div className="text-center">
               <p className="text-sm text-gray-500">
-                {!isConnected 
+                {!isClient
+                  ? 'Loading wallet connection...'
+                  : !isConnected 
                   ? 'Connect your wallet to mint NFTs after generating an image'
                   : isWrongNetwork
                   ? 'Switch to Monad Testnet to enable minting'
