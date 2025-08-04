@@ -402,25 +402,32 @@ export function useAppOperations() {
   // Handle transaction completion
   useEffect(() => {
     if (isTxSuccess && state.mintingState.status === 'mining' && txHash) {
-      // Get transaction receipt to extract Token ID from event logs
-      const getTransactionReceipt = async () => {
-        try {
-          const { data: receipt } = await fetch(`https://testnet.monadexplorer.com/api/v2/transactions/${txHash}`)
-            .then(res => res.json())
-          
-          // Look for PromptMinted event in logs
-          let tokenId: string | undefined
-          if (receipt?.logs) {
-            for (const log of receipt.logs) {
-              // Check if this is a PromptMinted event (event signature: 0x...)
-              if (log.topics && log.topics[0] === '0x...') { // We'll need the actual event signature
-                // Parse the event data to extract tokenId
-                // The tokenId is typically in the third topic or in the data field
-                tokenId = log.data // This is a simplified approach
-                break
-              }
-            }
-          }
+             // Get transaction receipt to extract Token ID from event logs
+       const getTransactionReceipt = async () => {
+         try {
+           const response = await fetch(`https://testnet.monadexplorer.com/api/v2/transactions/${txHash}`)
+           const data = await response.json()
+           const receipt = data.data
+           
+           // Look for PromptMinted event in logs
+           let tokenId: string | undefined
+           if (receipt?.logs) {
+             for (const log of receipt.logs) {
+               // Check if this is a PromptMinted event 
+               // You would need to replace this with the actual event signature
+               if (log.topics && log.topics.length > 3) {
+                 // Parse the event data to extract tokenId
+                 // The tokenId is typically in the third topic (after event signature and indexed parameters)
+                 try {
+                   // Convert hex to decimal for token ID
+                   tokenId = parseInt(log.topics[3], 16).toString()
+                   break
+                 } catch (e) {
+                   console.warn('Failed to parse tokenId from log:', e)
+                 }
+               }
+             }
+           }
           
           completeMinting(txHash)
           
